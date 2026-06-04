@@ -1,4 +1,2 @@
 .env
 venv/
-supplysync/
-manage.py
