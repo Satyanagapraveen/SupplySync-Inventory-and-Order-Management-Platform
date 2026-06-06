@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_spectacular',
     'django_celery_beat',
+    'apps.accounts',
 ]
 
 MIDDLEWARE = [
