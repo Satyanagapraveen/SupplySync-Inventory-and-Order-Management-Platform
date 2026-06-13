@@ -31,7 +31,11 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'django_celery_beat',
     
-    'apps.accounts',
+    'core.apps.CoreConfig',
+    'apps.accounts.apps.AccountsConfig',
+    'apps.categories.apps.CategoriesConfig',
+    'apps.products.apps.ProductsConfig',
+    'apps.warehouses.apps.WarehousesConfig',
 ]
 
 MIDDLEWARE = [
