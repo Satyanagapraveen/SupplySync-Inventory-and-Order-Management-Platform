@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'apps.warehouses.apps.WarehousesConfig',
     'apps.inventory.apps.InventoryConfig',
     'apps.suppliers.apps.SuppliersConfig',
+    'apps.purchase_orders.apps.PurchaseOrdersConfig',
+    'apps.sales_orders.apps.SalesOrdersConfig',
     
 ]
 
