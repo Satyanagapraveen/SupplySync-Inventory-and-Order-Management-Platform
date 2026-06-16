@@ -44,4 +44,13 @@ class LoginSerializer(serializers.Serializer):
             'username':user.username,
             'role':user.role
         }
+    
+class LogoutSerializer(serializers.Serializer):
+        refresh=serializers.CharField(required=True)
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password=serializers.CharField(required=True)
+    new_password=serializers.CharField(required=True,validators=[validate_password_strength])
+    
+
+
 
