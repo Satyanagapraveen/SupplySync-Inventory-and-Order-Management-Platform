@@ -6,3 +6,16 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = ['id', 'category_code', 'name', 'description', 'parent_category', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+class CategoryTreeSerializer(serializers.ModelSerializer):
+    children = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = ['id', 'category_code', 'name', 'description', 'children']
+
+    def get_children(self, obj):
+        if obj.children.exists():
+            children_queryset = obj.children.all()
+            return CategoryTreeSerializer(children_queryset, many=True).data
+        return []

@@ -18,15 +18,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework .routers import DefaultRouter
-from apps.warehouses.views import WarehouseViewSet
-from apps.categories.views import CategoryViewSet
-from apps.products.views import ProductViewSet
-router=DefaultRouter()
-router.register(r'warehouses',WarehouseViewSet,basename='warehouse')
-router.register(r'categories',CategoryViewSet,basename='category')
-router.register(r'products',ProductViewSet,basename='products')
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/auth/', include('apps.accounts.urls')),
-    path('api/v1/',include(router.urls)),
+    path('api/v1/warehouses/', include('apps.warehouses.urls')),
 ]
