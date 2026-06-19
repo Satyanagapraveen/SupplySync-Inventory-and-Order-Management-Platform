@@ -17,7 +17,7 @@ def custom_exception_handler(exc,context):
 
         if isinstance(exc.detail,dict):
             custom_response_data['error_code']="VALIDATION_FAILED"
-            for field,messages in exc.details.items():
+            for field,messages in exc.detail.items():
                 custom_response_data['errors'].append({
                     "field":field,
                     "message": messages[0] if isinstance(messages,list) else str(messages)
@@ -40,4 +40,3 @@ class InsufficientInventoryException(APIException):
 class InvalidOperationException(APIException):
     status_code=422
     default_code="INVALID_OPERATION"
-    

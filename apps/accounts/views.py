@@ -13,7 +13,7 @@ class LoginView(generics.CreateAPIView):
 
     def post(self,*args,**kwargs):
         serializer=self.get_serializer(data=self.request.data)
-        serializer.is_valid(raise_Exception=True)
+        serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data,status=status.HTTP_200_OK)
     
 class LogoutView(generics.GenericAPIView):
