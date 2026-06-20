@@ -2,7 +2,8 @@ import uuid
 from django.db import transaction
 from .models import Inventory, InventoryTransaction
 from core.exceptions import InsufficientInventoryException
-
+from django.core.cache import cache
+from django.db.models import F
 @transaction.atomic
 def adjust_inventory(data: dict, performed_by_user_id: int) -> InventoryTransaction:
     inventory, created = Inventory.objects.select_for_update().get_or_create(
@@ -86,3 +87,29 @@ def transfer_inventory(data: dict, performed_by_user_id: int) -> dict:
 
     # TODO: Dispatch Celery Task (process_inventory_transfer_event)
     return {"outbound": outbound_tx, "inbound": inbound_tx}
+
+def get_low_stock_alerts() -> list:
+    cached_alerts = cache.get('inventory:low-stock')
+    if cached_alerts is not None:
+        return cached_alerts
+
+    low_stock_records = Inventory.objects.filter(
+        is_deleted=False,
+        quantity_available__lte=F('product__reorder_level')
+    ).select_related('product', 'warehouse')
+
+    alerts = []
+    for inv in low_stock_records:
+        alerts.append({
+            "product_id": inv.product.id,
+            "sku": inv.product.sku,
+            "product_name": inv.product.name,
+            "warehouse_id": inv.warehouse.id,
+            "warehouse_name": inv.warehouse.name,
+            "quantity_available": inv.quantity_available,
+            "reorder_level": inv.product.reorder_level,
+            "deficit": inv.product.reorder_level - inv.quantity_available
+        })
+
+    cache.set('inventory:low-stock', alerts, timeout=300)
+    return alerts
