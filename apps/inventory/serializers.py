@@ -12,7 +12,7 @@ class TransferInventorySerializer(serializers.Serializer):
     source_warehouse_id=serializers.IntegerField(required=True)
     destination_warehouse_id=serializers.IntegerField(required=True)
     quantity=serializers.IntegerField(required=True)
-    notes=serializers.CharField(required=False,allow_blak=True)
+    notes=serializers.CharField(required=False,allow_blank=True)
 
 from .models import Inventory
 

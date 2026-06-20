@@ -31,7 +31,8 @@ def adjust_inventory(data: dict, performed_by_user_id: int) -> InventoryTransact
     inventory.save()
 
     transaction_record = InventoryTransaction.objects.create(
-        inventory=inventory,
+        product=inventory.product,
+        warehouse=inventory.warehouse,
         transaction_type=t_type,
         quantity=qty,
         reference_id=f"ADJ-{str(uuid.uuid4())[:8].upper()}",
