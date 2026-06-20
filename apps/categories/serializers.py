@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Category
 
 class CategorySerializer(serializers.ModelSerializer):
+    category_code = serializers.CharField(required=False, allow_blank=True)
     class Meta:
         model = Category
         fields = ['id', 'category_code', 'name', 'description', 'parent_category', 'created_at', 'updated_at']
