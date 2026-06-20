@@ -1,0 +1,88 @@
+import uuid
+from django.db import transaction
+from .models import Inventory, InventoryTransaction
+from core.exceptions import InsufficientInventoryException
+
+@transaction.atomic
+def adjust_inventory(data: dict, performed_by_user_id: int) -> InventoryTransaction:
+    inventory, created = Inventory.objects.select_for_update().get_or_create(
+        product_id=data['product_id'],
+        warehouse_id=data['warehouse_id'],
+        defaults={'quantity_available': 0, 'quantity_reserved': 0, 'quantity_damaged': 0}
+    )
+
+    t_type = data['transaction_type']
+    qty = data['quantity']
+
+    if t_type == 'INBOUND':
+        inventory.quantity_available += qty
+    elif t_type in ['OUTBOUND', 'DAMAGE_REPORT']:
+        if inventory.quantity_available < qty:
+            raise InsufficientInventoryException(detail="Not enough stock available.", code="INSUFFICIENT_INVENTORY")
+        inventory.quantity_available -= qty
+        if t_type == 'DAMAGE_REPORT':
+            inventory.quantity_damaged += qty
+    elif t_type == 'ADJUSTMENT':
+        if inventory.quantity_available + qty < 0:
+            raise InsufficientInventoryException(detail="Adjustment would result in negative stock.", code="INSUFFICIENT_INVENTORY")
+        inventory.quantity_available += qty
+
+    inventory.save()
+
+    transaction_record = InventoryTransaction.objects.create(
+        inventory=inventory,
+        transaction_type=t_type,
+        quantity=qty,
+        reference_id=f"ADJ-{str(uuid.uuid4())[:8].upper()}",
+        notes=data.get('notes', ''),
+        performed_by_id=performed_by_user_id
+    )
+
+    # TODO: Dispatch Celery Task (process_inventory_updated_event)
+    return transaction_record
+
+@transaction.atomic
+def transfer_inventory(data: dict, performed_by_user_id: int) -> dict:
+    product_id = data['product_id']
+    source_id = data['source_warehouse_id']
+    dest_id = data['destination_warehouse_id']
+    qty = data['quantity']
+
+    first_lock_id = min(source_id, dest_id)
+    second_lock_id = max(source_id, dest_id)
+
+    first_inv, _ = Inventory.objects.select_for_update().get_or_create(
+        product_id=product_id, warehouse_id=first_lock_id, 
+        defaults={'quantity_available': 0, 'quantity_reserved': 0, 'quantity_damaged': 0}
+    )
+    second_inv, _ = Inventory.objects.select_for_update().get_or_create(
+        product_id=product_id, warehouse_id=second_lock_id, 
+        defaults={'quantity_available': 0, 'quantity_reserved': 0, 'quantity_damaged': 0}
+    )
+
+    source_inv = first_inv if first_inv.warehouse_id == source_id else second_inv
+    dest_inv = first_inv if first_inv.warehouse_id == dest_id else second_inv
+
+    if source_inv.quantity_available < qty:
+        raise InsufficientInventoryException(detail="Source warehouse lacks sufficient stock.", code="INSUFFICIENT_INVENTORY")
+
+    source_inv.quantity_available -= qty
+    dest_inv.quantity_available += qty
+
+    source_inv.save()
+    dest_inv.save()
+
+    transfer_ref = f"TRANSFER-{str(uuid.uuid4())[:8].upper()}"
+
+    outbound_tx = InventoryTransaction.objects.create(
+        inventory=source_inv, transaction_type='OUTBOUND', quantity=qty,
+        reference_id=transfer_ref, notes=data.get('notes', ''), performed_by_id=performed_by_user_id
+    )
+    
+    inbound_tx = InventoryTransaction.objects.create(
+        inventory=dest_inv, transaction_type='INBOUND', quantity=qty,
+        reference_id=transfer_ref, notes=data.get('notes', ''), performed_by_id=performed_by_user_id
+    )
+
+    # TODO: Dispatch Celery Task (process_inventory_transfer_event)
+    return {"outbound": outbound_tx, "inbound": inbound_tx}
