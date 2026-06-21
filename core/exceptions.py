@@ -52,3 +52,16 @@ class PermissionDeniedException(APIException):
             self.detail = detail
         if code is not None:
             self.code = code
+
+class InsufficientStockException(APIException):
+    status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+    default_detail = 'Insufficient stock for the requested order.'
+    default_code = 'INSUFFICIENT_STOCK_FOR_ORDER'
+
+    #  Overrides the initialization to accept a custom 'short_items' array and formats it into the DRF detail dictionary.
+    def __init__(self, short_items, detail=None, code=None):
+        self.detail = {
+            "error_code": code or self.default_code,
+            "message": detail or self.default_detail,
+            "short_items": short_items
+        }
