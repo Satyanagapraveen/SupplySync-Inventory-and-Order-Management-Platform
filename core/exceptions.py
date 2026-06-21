@@ -1,6 +1,8 @@
 from rest_framework.views import exception_handler
 from rest_framework.exceptions import APIException
 from django.utils import timezone
+from rest_framework.exceptions import PermissionDenied
+from rest_framework import status
 
 def custom_exception_handler(exc,context):
     response=exception_handler(exc,context)
@@ -40,3 +42,13 @@ class InsufficientInventoryException(APIException):
 class InvalidOperationException(APIException):
     status_code=422
     default_code="INVALID_OPERATION"
+class PermissionDeniedException(APIException):
+    status_code = 422
+    default_detail = 'You do not have permission to perform this action.'
+    default_code = 'PERMISSION_DENIED'
+
+    def __init__(self, detail=None, code=None):
+        if detail is not None:
+            self.detail = detail
+        if code is not None:
+            self.code = code
