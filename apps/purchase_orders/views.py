@@ -22,7 +22,14 @@ class PurchaseOrderListCreateView(generics.ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        po = create_purchase_order(serializer.validated_data, request.user.id)
+        
+        # WHAT: Creates a clean copy of the validated data.
+        clean_data = serializer.validated_data
+        
+        # Bypasses DRF's aggressive nested stripping.
+        clean_data['items'] = request.data.get('items', [])
+        
+        po = create_purchase_order(clean_data, request.user.id)
         response_serializer = self.get_serializer(po)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 

@@ -24,6 +24,7 @@ class PurchaseOrder(BaseModel):
 
     class Meta:
         db_table = 'purchase_orders'
+        ordering=['-created_at']
 
     def __str__(self):
         return self.po_number

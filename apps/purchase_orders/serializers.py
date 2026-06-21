@@ -1,13 +1,16 @@
 from rest_framework import serializers
 from .models import PurchaseOrder,PurchaseOrderItem
-
-class PurchaseOrderItemSerializer(serializers.Serializer):
+from apps.suppliers.models import Supplier
+from apps.warehouses.models import Warehouse
+class PurchaseOrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model=PurchaseOrderItem
-        fields=['id','product','quantity_ordered','quantity_recieved','unit_price']
-        read_only_fileds=['id','quantity_recieved']
+        fields=['id','product','quantity_ordered','quantity_received','unit_price','total_price']
+        read_only_fileds=['id','quantity_recieved','total_price']
 
-class PurchaseOrderSerializer(serializers.Serializer):
+class PurchaseOrderSerializer(serializers.ModelSerializer):
+    supplier = serializers.PrimaryKeyRelatedField(queryset=Supplier.objects.all(), required=True)
+    warehouse = serializers.PrimaryKeyRelatedField(queryset=Warehouse.objects.all(), required=True)
     items = PurchaseOrderItemSerializer(many=True, read_only=True)
     po_number = serializers.CharField(required=False, allow_blank=True)
     class Meta:
