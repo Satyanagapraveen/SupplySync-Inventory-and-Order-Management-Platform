@@ -1,0 +1,20 @@
+import logging
+from.services import check_and_publish_low_stock_alert
+from celery import shared_task
+logger=logging.getLogger(__name__)
+@shared_task(bind=True,max_retries=3)
+def process_inventory_updated_event(self,product_id:int,warehouse_id:int,transaction_type:str,quantity:str):
+    try:
+        logger.info(f"EVENT[inventory-updated]:product_id={product_id},warehouse_id={warehouse_id},type={transaction_type},qty={quantity}")
+        check_and_publish_low_stock_alert(product_id,warehouse_id)    
+    except Exception as exc:
+        logger.error(f"Task product_inventory_updated_event failed, retrying ... Exception:{exc}")
+        raise self.retry(exc=exc,countdown=2**self.request.retries)
+    
+@shared_task(bind=True, max_retries=3)
+def process_inventory_transfer_event(self, product_id: int, source_warehouse_id: int, destination_warehouse_id: int, quantity: int):
+    try:
+        logger.info(f"EVENT [inventory-transfer-initiated]: product_id={product_id}, from={source_warehouse_id}, to={destination_warehouse_id}, qty={quantity}")
+    except Exception as exc:
+        logger.error(f"Task process_inventory_transfer_event failed, retrying... Exception: {exc}")
+        raise self.retry(exc=exc, countdown=2 ** self.request.retries)

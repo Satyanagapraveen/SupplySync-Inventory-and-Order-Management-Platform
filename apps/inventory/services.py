@@ -4,6 +4,8 @@ from .models import Inventory, InventoryTransaction
 from core.exceptions import InsufficientInventoryException
 from django.core.cache import cache
 from django.db.models import F
+import logging
+from django.core.cache import cache
 @transaction.atomic
 def adjust_inventory(data: dict, performed_by_user_id: int) -> InventoryTransaction:
     inventory, created = Inventory.objects.select_for_update().get_or_create(
@@ -114,3 +116,17 @@ def get_low_stock_alerts() -> list:
 
     cache.set('inventory:low-stock', alerts, timeout=300)
     return alerts
+
+logger=logging.getLogger(__name__)
+def check_and_publish_low_stock_alert(product_id: int, warehouse_id: int) -> None:
+    try:
+        inventory=Inventory.objects.get(product_id=product_id,warehouse_id=warehouse_id)
+        if inventory.quantity_available<=inventory.product.reorder_level:
+            logger.warning(
+                f"LOW STOCK ALERT:PRODUCT{inventory.product.sku} in Warehouse{inventory.warehouse.name}"
+                f" has{inventory.quantity_available} units remaining(reorder_level:{inventory.product.reorder_level})"
+            )
+            cache.delete('inventory:low-stock')
+    except Inventory.DoesNotExist:
+        logger.error(f"Failed to check low stock:Inventory record not found for product{product_id} in warehouse{warehouse_id}")
+
