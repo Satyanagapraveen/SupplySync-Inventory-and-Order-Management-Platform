@@ -135,3 +135,15 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'auto-invalidate-low-stock-cache': {
+        'task': 'apps.inventory.tasks.auto_invalidate_low_stock_cache',
+        'schedule': crontab(minute='*/5'),
+    },
+    'generate-daily-operations-summary': {
+        'task': 'apps.sales_orders.tasks.generate_daily_operations_summary',
+        'schedule': crontab(hour=0, minute=0),
+    },
+}

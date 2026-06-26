@@ -1,6 +1,7 @@
 import logging
 from.services import check_and_publish_low_stock_alert
 from celery import shared_task
+from django.core.cache import cache
 logger=logging.getLogger(__name__)
 @shared_task(bind=True,max_retries=3)
 def process_inventory_updated_event(self,product_id:int,warehouse_id:int,transaction_type:str,quantity:str):
@@ -18,3 +19,7 @@ def process_inventory_transfer_event(self, product_id: int, source_warehouse_id:
     except Exception as exc:
         logger.error(f"Task process_inventory_transfer_event failed, retrying... Exception: {exc}")
         raise self.retry(exc=exc, countdown=2 ** self.request.retries)
+
+@shared_task
+def auto_invalidate_low_stock_cache():
+    cache.delete('inventory:low-stock')
