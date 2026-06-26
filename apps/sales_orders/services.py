@@ -4,6 +4,7 @@ from .models import SalesOrder, SalesOrderItem
 from apps.inventory.models import Inventory
 from apps.inventory.services import adjust_inventory
 from core.exceptions import InsufficientStockException, InvalidOperationException
+from apps.sales_orders.tasks import process_sales_order_created_event, process_sales_order_cancelled_event
 
 def generate_so_number() -> str:
     # Generates a random 8-character string for the Order Number
@@ -77,8 +78,7 @@ def create_sales_order(data: dict, created_by_user_id: int) -> SalesOrder:
         
     so.total_amount = total_amount
     so.save()
-    
-    # TODO: Dispatch Celery Event (process_sales_order_created_event)
+    process_sales_order_created_event.delay(so.id, created_by_user_id)
     return so
 
 @transaction.atomic
@@ -135,5 +135,5 @@ def cancel_sales_order(so_id: int, reason: str) -> SalesOrder:
         
     so.status = 'CANCELLED'
     so.save()
-    # TODO: Dispatch Celery Event
+    process_sales_order_cancelled_event.delay(so.id)
     return so

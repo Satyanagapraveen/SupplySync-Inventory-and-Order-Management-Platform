@@ -5,15 +5,17 @@ from django.utils import timezone
 from core.exceptions import InvalidOperationException,PermissionDeniedException
 from apps.inventory.services import adjust_inventory
 redis_client=redis.Redis(host='localhost',port=6379,db=0,decode_responses=True)
+from django.core.cache import cache
+from apps.purchase_orders.tasks import process_purchase_order_received_event
 
-def generate_po_number() ->str:
-    today_str=timezone.now().strftime("%Y%m%d")
-    redis_key=f"po_sequence:{today_str}"
-    current_sequence=redis_client.incr(redis_key)
-    if current_sequence==1:
-        redis_client.expire(redis_key,86400)
+def generate_po_number() -> str:
+    today_str = timezone.now().strftime("%Y%m%d")
+    redis_key = f"po-sequence:{today_str}"
     
-    padded_sequence=str(current_sequence).zfill(4)
+    cache.add(redis_key, 0, timeout=86400)
+    current_sequence = cache.incr(redis_key)
+    
+    padded_sequence = str(current_sequence).zfill(4)
     return f"PO-{today_str}-{padded_sequence}"
 
 @transaction.atomic
@@ -117,7 +119,6 @@ def receive_purchase_order(po_id: int, data: dict, performed_by_user_id: int) ->
             "notes": f"Automated PO Intake Receipt. Reference PO: {po.po_number}"
         }, performed_by_user_id)
         
-    # Check total order status post-computation
     for item in po.items.all():
         if item.quantity_received < item.quantity_ordered:
             all_items_fulfilled = False
@@ -130,7 +131,9 @@ def receive_purchase_order(po_id: int, data: dict, performed_by_user_id: int) ->
         po.status = 'PARTIALLY_RECEIVED'
         
     po.save()
-    # TODO: Dispatch Celery Event (process_purchase_order_received_event)
+    
+    process_purchase_order_received_event.delay(po.id, performed_by_user_id)
+    
     return po
 
 @transaction.atomic
