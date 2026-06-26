@@ -20,3 +20,25 @@ def create_category(data: dict) -> Category:
 def get_category_tree() -> list:
     root_categories = Category.objects.filter(parent_category__isnull=True).prefetch_related('children')
     return root_categories
+
+import logging
+from django.core.cache import cache
+from core.constants import CATEGORY_CACHE_TTL
+from .models import Category
+
+logger = logging.getLogger(__name__)
+
+def get_category_tree():
+    cache_key = 'categories:tree'
+    
+    cached_tree = cache.get(cache_key)
+    if cached_tree:
+        return cached_tree
+        
+    tree = list(Category.objects.filter(parent__isnull=True, is_deleted=False))
+    
+    cache.set(cache_key, tree, timeout=CATEGORY_CACHE_TTL)
+    return tree
+
+def invalidate_category_cache():
+    cache.delete('categories:tree')

@@ -50,3 +50,27 @@ def delete_supplier(supplier_id: int) -> None:
     supplier.is_active = False
     supplier.is_deleted = True
     supplier.save()
+
+
+import logging
+from django.core.cache import cache
+from core.constants import SUPPLIER_CACHE_TTL
+from .models import Supplier
+
+logger = logging.getLogger(__name__)
+
+def get_supplier(supplier_id: int):
+    cache_key = f'suppliers:detail:{supplier_id}'
+    
+    cached_supplier = cache.get(cache_key)
+    if cached_supplier:
+        return cached_supplier
+        
+    supplier = Supplier.objects.get(id=supplier_id)
+    
+    cache.set(cache_key, supplier, timeout=SUPPLIER_CACHE_TTL)
+    return supplier
+
+def invalidate_supplier_cache(supplier_id: int):
+    if supplier_id:
+        cache.delete(f'suppliers:detail:{supplier_id}')
