@@ -84,3 +84,47 @@ def get_dashboard_summary() -> dict:
     cache.set(cache_key, result, timeout=DASHBOARD_CACHE_TTL)
     
     return result
+
+def get_inventory_valuation(warehouse_id: int = None) -> dict:
+    warehouses_query = Warehouse.objects.filter(is_active=True, is_deleted=False)
+    
+    if warehouse_id:
+        warehouses_query = warehouses_query.filter(id=warehouse_id)
+
+    grand_total_value = 0.00
+    warehouse_reports = []
+
+    for warehouse in warehouses_query:
+        inventory_records = Inventory.objects.filter(
+            warehouse=warehouse,
+            is_deleted=False
+        ).select_related('product')
+
+        products_list = []
+        warehouse_total = 0.00
+
+        for inv in inventory_records:
+            line_value = float(inv.quantity_available) * float(inv.product.unit_price)
+            warehouse_total += line_value
+
+            products_list.append({
+                "sku": inv.product.sku,
+                "product_name": inv.product.name,
+                "quantity_available": inv.quantity_available,
+                "unit_price": str(inv.product.unit_price),
+                "total_value": str(round(line_value, 2))
+            })
+
+        grand_total_value += warehouse_total
+
+        warehouse_reports.append({
+            "warehouse_id": warehouse.id,
+            "warehouse_name": warehouse.name,
+            "warehouse_total_value": str(round(warehouse_total, 2)),
+            "products": products_list
+        })
+
+    return {
+        "grand_total_value": str(round(grand_total_value, 2)),
+        "warehouses": warehouse_reports
+    }
