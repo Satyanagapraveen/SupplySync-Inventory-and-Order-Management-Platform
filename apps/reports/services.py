@@ -9,6 +9,7 @@ from apps.suppliers.models import Supplier
 from apps.inventory.models import Inventory, InventoryTransaction
 from apps.purchase_orders.models import PurchaseOrder
 from apps.sales_orders.models import SalesOrder
+from django.db.models import Count
 
 def get_dashboard_summary() -> dict:
     
@@ -127,4 +128,50 @@ def get_inventory_valuation(warehouse_id: int = None) -> dict:
     return {
         "grand_total_value": str(round(grand_total_value, 2)),
         "warehouses": warehouse_reports
+    }
+
+def get_purchase_order_summary(start_date: str = None, end_date: str = None, supplier_id: int = None, status: str = None) -> dict:
+    
+    qs = PurchaseOrder.objects.filter(is_deleted=False)
+    
+    if start_date:
+        qs = qs.filter(created_at__date__gte=start_date)
+        
+    if end_date:
+        qs = qs.filter(created_at__date__lte=end_date)
+        
+    if supplier_id:
+        qs = qs.filter(supplier_id=supplier_id)
+        
+    if status:
+        qs = qs.filter(status=status)
+
+    total_orders = qs.count()
+
+    value_agg = qs.aggregate(total=Sum('total_amount'))
+    
+    total_value = value_agg['total'] or 0.00
+
+    breakdown_by_status = list(
+        qs.values('status')
+        .annotate(
+            count=Count('id'), 
+            total_value=Sum('total_amount')
+        )
+        .order_by('status')
+    )
+
+    top_suppliers = list(
+        qs.values('supplier_id', 'supplier__name')
+        .annotate(
+            total_value=Sum('total_amount')
+        )
+        .order_by('-total_value')[:5]
+    )
+
+    return {
+        "total_orders": total_orders,
+        "total_value": str(round(total_value, 2)),
+        "breakdown_by_status": breakdown_by_status,
+        "top_suppliers": top_suppliers
     }

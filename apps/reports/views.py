@@ -1,7 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from core.permissions import IsAdminUser, IsWarehouseManagerOrAdmin, IsProcurementManagerOrAdmin
-from .services import get_dashboard_summary,get_inventory_valuation
+from .services import get_dashboard_summary,get_inventory_valuation,get_purchase_order_summary
 
 class DashboardReportView(generics.GenericAPIView):
     
@@ -30,3 +30,32 @@ class InventoryValuationReportView(generics.GenericAPIView):
         valuation_data = get_inventory_valuation(warehouse_id)
         
         return Response(valuation_data, status=status.HTTP_200_OK)
+    
+class PurchaseOrderSummaryReportView(generics.GenericAPIView):
+    
+    permission_classes = [IsAdminUser | IsWarehouseManagerOrAdmin | IsProcurementManagerOrAdmin]
+
+    def get(self, request, *args, **kwargs):
+        
+        start_date = request.query_params.get('start_date')
+        
+        end_date = request.query_params.get('end_date')
+        
+        supplier_id = request.query_params.get('supplier_id')
+        
+        status_filter = request.query_params.get('status')
+
+        if supplier_id:
+            try:
+                supplier_id = int(supplier_id)
+            except ValueError:
+                supplier_id = None
+
+        summary_data = get_purchase_order_summary(
+            start_date=start_date,
+            end_date=end_date,
+            supplier_id=supplier_id,
+            status=status_filter
+        )
+        
+        return Response(summary_data, status=status.HTTP_200_OK)
