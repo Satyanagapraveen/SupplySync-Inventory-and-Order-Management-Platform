@@ -8,7 +8,7 @@ from apps.products.models import Product
 from apps.suppliers.models import Supplier
 from apps.inventory.models import Inventory, InventoryTransaction
 from apps.purchase_orders.models import PurchaseOrder
-from apps.sales_orders.models import SalesOrder
+from apps.sales_orders.models import SalesOrder,SalesOrderItem
 from django.db.models import Count
 
 def get_dashboard_summary() -> dict:
@@ -174,4 +174,61 @@ def get_purchase_order_summary(start_date: str = None, end_date: str = None, sup
         "total_value": str(round(total_value, 2)),
         "breakdown_by_status": breakdown_by_status,
         "top_suppliers": top_suppliers
+    }
+
+def get_sales_order_summary(start_date: str = None, end_date: str = None, warehouse_id: int = None, status: str = None) -> dict:
+    
+    qs = SalesOrder.objects.filter(is_deleted=False)
+    
+    if start_date:
+        qs = qs.filter(created_at__date__gte=start_date)
+        
+    if end_date:
+        qs = qs.filter(created_at__date__lte=end_date)
+        
+    if warehouse_id:
+        qs = qs.filter(warehouse_id=warehouse_id)
+        
+    if status:
+        qs = qs.filter(status=status)
+
+    total_orders = qs.count()
+
+    delivered_qs = qs.filter(status='DELIVERED')
+    
+    delivered_count = delivered_qs.count()
+    
+    revenue_agg = delivered_qs.aggregate(total=Sum('total_amount'))
+    
+    total_revenue = revenue_agg['total'] or 0.00
+
+    average_order_value = 0.00
+    
+    if delivered_count > 0:
+        average_order_value = float(total_revenue) / delivered_count
+
+    breakdown_by_status = list(
+        qs.values('status')
+        .annotate(
+            count=Count('id'), 
+            total_value=Sum('total_amount')
+        )
+        .order_by('status')
+    )
+
+    top_products = list(
+        SalesOrderItem.objects.filter(sales_order__in=qs)
+        .values('product_id', 'product__sku', 'product__name')
+        .annotate(
+            total_revenue=Sum('total_price')
+        )
+        .order_by('-total_revenue')[:5]
+    )
+
+    return {
+        "total_orders": total_orders,
+        "total_revenue": str(round(total_revenue, 2)),
+        "average_order_value": str(round(average_order_value, 2)),
+        "breakdown_by_status": breakdown_by_status,
+        "top_products_by_revenue": top_products
     }
