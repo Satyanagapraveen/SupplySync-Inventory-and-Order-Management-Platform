@@ -1,2 +1,2 @@
-def test_pytest_is_working():
-    assert 1+1==2
+def test_is_it_alive():
+    assert True
