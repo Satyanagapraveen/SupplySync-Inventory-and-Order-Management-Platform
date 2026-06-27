@@ -11,8 +11,19 @@ def api_client():
 @pytest.fixture
 def user_factory(db):
     def create_user(username, email, password, is_staff=False, is_superuser=False):
+    def create_user(username, email, password, role, is_staff=False, is_superuser=False, full_name=None):
         User = get_user_model()
         user = User.objects.create_user(username=username, email=email, password=password)
+        if full_name is None:
+            full_name = username.replace("_", " ").title()
+            
+        user = User.objects.create_user(
+            username=username, 
+            email=email, 
+            password=password, 
+            role=role,
+            full_name=full_name
+        )
         user.is_staff = is_staff
         user.is_superuser = is_superuser
         user.save()
@@ -22,18 +33,22 @@ def user_factory(db):
 @pytest.fixture
 def admin_user(user_factory):
     return user_factory("admin", "admin@sync.com", "pass", is_staff=True, is_superuser=True)
+    return user_factory("admin", "admin@sync.com", "pass", role="ADMIN", is_staff=True, is_superuser=True)
 
 @pytest.fixture
 def warehouse_manager_user(user_factory):
     return user_factory("wm_user", "wm@sync.com", "pass", is_staff=True)
+    return user_factory("wm_user", "wm@sync.com", "pass", role="WAREHOUSE_MANAGER", is_staff=True)
 
 @pytest.fixture
 def procurement_manager_user(user_factory):
     return user_factory("pm_user", "pm@sync.com", "pass", is_staff=True)
+    return user_factory("pm_user", "pm@sync.com", "pass", role="PROCUREMENT_MANAGER", is_staff=True)
 
 @pytest.fixture
 def staff_user(user_factory):
     return user_factory("staff_user", "staff@sync.com", "pass", is_staff=False)
+    return user_factory("staff_user", "staff@sync.com", "pass", role="STAFF")
 
 # 3. Authenticated Client Factories
 @pytest.fixture
@@ -60,7 +75,11 @@ def authenticated_staff_client(api_client, staff_user):
 @pytest.fixture
 def sample_warehouse(db):
     from apps.warehouses.models import Warehouse
-    return Warehouse.objects.create(name="Central Hub", location="Hyderabad")
+    return Warehouse.objects.create(
+        name="Central Hub", 
+        location="Hyderabad",
+        capacity=10000
+    )
 
 @pytest.fixture
 def sample_category(db):
@@ -70,7 +89,6 @@ def sample_category(db):
 @pytest.fixture
 def sample_product(db, sample_category):
     from apps.products.models import Product
-    return Product.objects.create(name="Laptop", category=sample_category, reorder_level=5)
     return Product.objects.create(
         name="Laptop", 
         sku="LP-PRO-15",
@@ -87,4 +105,8 @@ def sample_supplier(db):
 @pytest.fixture
 def sample_inventory(db, sample_product, sample_warehouse):
     from apps.inventory.models import Inventory
-    return Inventory.objects.create(product=sample_product, warehouse=sample_warehouse, stock_level=100)
+    return Inventory.objects.create(
+        product=sample_product, 
+        warehouse=sample_warehouse, 
+        quantity_available=100
+    )
