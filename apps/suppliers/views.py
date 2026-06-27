@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from core.permissions import IsProcurementManagerOrAdmin
 from .serializers import SupplierSerializer
 from .services import (
-    create_supplier, update_supplier, get_supplier_by_id, 
+    create_supplier, update_supplier, get_supplier, 
     list_suppliers, delete_supplier
 )
 

@@ -29,4 +29,5 @@ urlpatterns = [
     path('api/v1/suppliers',include('apps.suppliers.urls')),
     path('api/v1/purchase-orders/',include('apps.purchase_orders.urls')),
     path('api/v1/sales-orders/',include('apps.sales_orders.urls')),
+    path('api/v1/reports/', include('apps.reports.urls')),
 ]
