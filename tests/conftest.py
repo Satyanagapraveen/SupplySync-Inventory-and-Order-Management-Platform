@@ -10,10 +10,8 @@ def api_client():
 # 2. User Factories
 @pytest.fixture
 def user_factory(db):
-    def create_user(username, email, password, is_staff=False, is_superuser=False):
     def create_user(username, email, password, role, is_staff=False, is_superuser=False, full_name=None):
         User = get_user_model()
-        user = User.objects.create_user(username=username, email=email, password=password)
         if full_name is None:
             full_name = username.replace("_", " ").title()
             
@@ -32,22 +30,18 @@ def user_factory(db):
 
 @pytest.fixture
 def admin_user(user_factory):
-    return user_factory("admin", "admin@sync.com", "pass", is_staff=True, is_superuser=True)
     return user_factory("admin", "admin@sync.com", "pass", role="ADMIN", is_staff=True, is_superuser=True)
 
 @pytest.fixture
 def warehouse_manager_user(user_factory):
-    return user_factory("wm_user", "wm@sync.com", "pass", is_staff=True)
     return user_factory("wm_user", "wm@sync.com", "pass", role="WAREHOUSE_MANAGER", is_staff=True)
 
 @pytest.fixture
 def procurement_manager_user(user_factory):
-    return user_factory("pm_user", "pm@sync.com", "pass", is_staff=True)
     return user_factory("pm_user", "pm@sync.com", "pass", role="PROCUREMENT_MANAGER", is_staff=True)
 
 @pytest.fixture
 def staff_user(user_factory):
-    return user_factory("staff_user", "staff@sync.com", "pass", is_staff=False)
     return user_factory("staff_user", "staff@sync.com", "pass", role="STAFF")
 
 # 3. Authenticated Client Factories
