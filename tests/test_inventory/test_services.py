@@ -114,3 +114,35 @@ def test_transfer_inventory_deducts_from_source_and_adds_to_destination(db, samp
     assert result['inbound'].warehouse.id == destination_warehouse.id
     
     assert InventoryTransaction.objects.count() == 2
+
+def test_transfer_inventory_raises_exception_when_source_has_insufficient_stock(db, sample_inventory, staff_user):
+    
+    from apps.warehouses.models import Warehouse
+    destination_warehouse = Warehouse.objects.create(
+        name="Dest Warehouse 2", warehouse_code="WH-DEST2", 
+        location="789 Dest St", city="Dest City", 
+        state="Dest State", pincode="112233", capacity=500
+    )
+    
+    initial_source_qty = sample_inventory.quantity_available
+    
+    initial_transaction_count = InventoryTransaction.objects.count()
+    
+    test_data = {
+        'product_id': sample_inventory.product.id,
+        'source_warehouse_id': sample_inventory.warehouse.id,
+        'destination_warehouse_id': destination_warehouse.id,
+        'quantity': 999, 
+        'notes': 'Illegal transfer attempt'
+    }
+    
+    with pytest.raises(InsufficientInventoryException) as exc_info:
+        transfer_inventory(data=test_data, performed_by_user_id=staff_user.id)
+        
+    assert exc_info.value.default_code == "INSUFFICIENT_INVENTORY"
+    
+    sample_inventory.refresh_from_db()
+    assert sample_inventory.quantity_available == initial_source_qty
+    
+    assert InventoryTransaction.objects.count() == initial_transaction_count
+
