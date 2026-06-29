@@ -1,11 +1,14 @@
 import uuid
-from django.db import transaction
-from .models import Inventory, InventoryTransaction
-from core.exceptions import InsufficientInventoryException
-from django.core.cache import cache
-from django.db.models import F
 import logging
+from django.db import transaction
+from django.db.models import F
 from django.core.cache import cache
+from core.exceptions import InsufficientInventoryException
+from .models import Inventory, InventoryTransaction
+from .tasks import process_inventory_updated_event, process_inventory_transfer_event
+
+logger = logging.getLogger(__name__)
+
 @transaction.atomic
 def adjust_inventory(data: dict, performed_by_user_id: int) -> InventoryTransaction:
     inventory, created = Inventory.objects.select_for_update().get_or_create(
@@ -42,7 +45,13 @@ def adjust_inventory(data: dict, performed_by_user_id: int) -> InventoryTransact
         performed_by_id=performed_by_user_id
     )
 
-    # TODO: Dispatch Celery Task (process_inventory_updated_event)
+    process_inventory_updated_event.delay(
+        product_id=inventory.product.id,
+        warehouse_id=inventory.warehouse.id,
+        transaction_type=t_type,
+        quantity=qty
+    )
+    
     return transaction_record
 
 @transaction.atomic
@@ -88,7 +97,13 @@ def transfer_inventory(data: dict, performed_by_user_id: int) -> dict:
         reference_id=transfer_ref, notes=data.get('notes', ''), performed_by_id=performed_by_user_id
     )
 
-    # TODO: Dispatch Celery Task (process_inventory_transfer_event)
+    process_inventory_transfer_event.delay(
+        product_id=product_id,
+        source_warehouse_id=source_id,
+        destination_warehouse_id=dest_id,
+        quantity=qty
+    )
+    
     return {"outbound": outbound_tx, "inbound": inbound_tx}
 
 def get_low_stock_alerts() -> list:
@@ -117,16 +132,14 @@ def get_low_stock_alerts() -> list:
     cache.set('inventory:low-stock', alerts, timeout=300)
     return alerts
 
-logger=logging.getLogger(__name__)
 def check_and_publish_low_stock_alert(product_id: int, warehouse_id: int) -> None:
     try:
-        inventory=Inventory.objects.get(product_id=product_id,warehouse_id=warehouse_id)
-        if inventory.quantity_available<=inventory.product.reorder_level:
+        inventory = Inventory.objects.get(product_id=product_id, warehouse_id=warehouse_id)
+        if inventory.quantity_available <= inventory.product.reorder_level:
             logger.warning(
-                f"LOW STOCK ALERT:PRODUCT{inventory.product.sku} in Warehouse{inventory.warehouse.name}"
-                f" has{inventory.quantity_available} units remaining(reorder_level:{inventory.product.reorder_level})"
+                f"LOW STOCK ALERT: PRODUCT {inventory.product.sku} in Warehouse {inventory.warehouse.name} "
+                f"has {inventory.quantity_available} units remaining (reorder_level: {inventory.product.reorder_level})"
             )
             cache.delete('inventory:low-stock')
     except Inventory.DoesNotExist:
-        logger.error(f"Failed to check low stock:Inventory record not found for product{product_id} in warehouse{warehouse_id}")
-
+        logger.error(f"Failed to check low stock: Inventory record not found for product {product_id} in warehouse {warehouse_id}")
