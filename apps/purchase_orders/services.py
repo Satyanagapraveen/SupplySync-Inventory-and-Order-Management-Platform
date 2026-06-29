@@ -80,6 +80,8 @@ def approve_purchase_order(po_id: int, approved_by_user_id: int) -> PurchaseOrde
         
     # if po.created_by_id == approved_by_user_id:
     #     raise PermissionDeniedException(detail="Self-approval is strictly forbidden.", code="SELF_APPROVAL_NOT_ALLOWED")
+    if po.created_by_id == approved_by_user_id:
+        raise PermissionDeniedException(detail="Self-approval is strictly forbidden.", code="SELF_APPROVAL_NOT_ALLOWED")
         
     po.status = 'APPROVED'
     po.approved_by_id = approved_by_user_id
@@ -142,6 +144,7 @@ def cancel_purchase_order(po_id: int, reason: str) -> PurchaseOrder:
     
     if po.status in ['ORDERED', 'PARTIALLY_RECEIVED', 'RECEIVED']:
         raise InvalidOperationException(detail="Cannot cancel an active fulfilling order.", code="PO_CANCELLATION_NOT_ALLOWED")
+        raise InvalidOperationException(detail="Cannot cancel an order that is being fulfilled or has been received.", code="PO_CANCELLATION_NOT_ALLOWED")
         
     po.status = 'CANCELLED'
     po.save()
