@@ -88,15 +88,24 @@ def transfer_inventory(data: dict, performed_by_user_id: int) -> dict:
     transfer_ref = f"TRANSFER-{str(uuid.uuid4())[:8].upper()}"
 
     outbound_tx = InventoryTransaction.objects.create(
-        inventory=source_inv, transaction_type='OUTBOUND', quantity=qty,
-        reference_id=transfer_ref, notes=data.get('notes', ''), performed_by_id=performed_by_user_id
+        product=source_inv.product,
+        warehouse=source_inv.warehouse,
+        transaction_type='OUTBOUND', 
+        quantity=qty,
+        reference_id=transfer_ref, 
+        notes=data.get('notes', ''), 
+        performed_by_id=performed_by_user_id
     )
     
     inbound_tx = InventoryTransaction.objects.create(
-        inventory=dest_inv, transaction_type='INBOUND', quantity=qty,
-        reference_id=transfer_ref, notes=data.get('notes', ''), performed_by_id=performed_by_user_id
+        product=dest_inv.product,
+        warehouse=dest_inv.warehouse,
+        transaction_type='INBOUND', 
+        quantity=qty,
+        reference_id=transfer_ref, 
+        notes=data.get('notes', ''), 
+        performed_by_id=performed_by_user_id
     )
-
     process_inventory_transfer_event.delay(
         product_id=product_id,
         source_warehouse_id=source_id,
