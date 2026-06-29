@@ -1,5 +1,5 @@
 import pytest
-from apps.inventory.services import adjust_inventory,transfer_inventory
+from apps.inventory.services import adjust_inventory,transfer_inventory,get_low_stock_alerts
 from apps.inventory.models import InventoryTransaction
 from core.exceptions import InsufficientInventoryException
 
@@ -146,3 +146,23 @@ def test_transfer_inventory_raises_exception_when_source_has_insufficient_stock(
     
     assert InventoryTransaction.objects.count() == initial_transaction_count
 
+def test_get_low_stock_alerts_returns_products_below_reorder_level(db, sample_inventory):
+    # WHY: The sample_inventory fixture has 50 units. If we set reorder_level to 60,
+    # the inventory of 50 will instantly trigger a low stock alert.
+    product = sample_inventory.product
+    product.reorder_level = 60
+    product.save()
+    
+    # Trigger the service function
+    alerts = get_low_stock_alerts()
+    
+    # Assertions
+    assert len(alerts) == 1
+    assert alerts[0]['product_id'] == product.id
+    assert alerts[0]['deficit'] == 10  # 60 - 50 = 10 deficit
+    
+    # Assert that the result was cached
+    from django.core.cache import cache
+    cached_data = cache.get('inventory:low-stock')
+    assert cached_data is not None
+    assert cached_data[0]['sku'] == product.sku
