@@ -10,8 +10,6 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'category_code', 'name', 'description', 'parent_category', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-@extend_schema_field('apps.categoried.serializers.CategorySerializer(many=True)')
-@extend_schema_field(serializers.ListField(child=serializers.DictField()))
 class CategoryTreeSerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()
 
@@ -19,6 +17,7 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
         model = Category
         fields = ['id', 'category_code', 'name', 'description', 'children']
 
+    @extend_schema_field(CategorySerializer(many=True))
     def get_children(self, obj):
         if obj.children.exists():
             children_queryset = obj.children.all()

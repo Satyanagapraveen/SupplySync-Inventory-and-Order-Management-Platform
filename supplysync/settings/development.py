@@ -2,7 +2,7 @@
 supplysync/settings/development.py
 """
 from .base import *
-
+import os
 # Enable debug mode for local development
 DEBUG = True
 
@@ -15,8 +15,8 @@ DATABASES = {
         'NAME': 'supplysync_db',
         'USER': 'supplysync_user',
         'PASSWORD': 'supplysync_pass',
-        'HOST': 'localhost', # run django locally, outside docker
-        'PORT': '5432',
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
         'OPTIONS': {
             'options': '-c search_path=supplysync,public' 
         }

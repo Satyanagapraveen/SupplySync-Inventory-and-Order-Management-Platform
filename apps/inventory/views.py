@@ -2,8 +2,8 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from core.permissions import IsWarehouseManagerOrAdminOrStaff, IsWarehouseManagerOrAdmin
-from .models import Inventory
-from .serializers import AdjustInventorySerializer, TransferInventorySerializer, InventorySerializer
+from .models import Inventory 
+from .serializers import AdjustInventorySerializer, TransferInventorySerializer, InventorySerializer, LowStockAlertSerializer
 from .services import adjust_inventory, transfer_inventory, get_low_stock_alerts
 
 class InventoryAdjustView(generics.GenericAPIView):
@@ -33,11 +33,13 @@ class InventoryTransferView(generics.GenericAPIView):
         )
 
 class LowStockAlertView(generics.GenericAPIView):
+    serializer_class = LowStockAlertSerializer
     permission_classes = [IsWarehouseManagerOrAdmin]
 
     def get(self, request, *args, **kwargs):
         alerts = get_low_stock_alerts()
-        return Response(alerts, status=status.HTTP_200_OK)
+        serializer = self.get_serializer(alerts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class WarehouseInventoryView(generics.ListAPIView):
     serializer_class = InventorySerializer

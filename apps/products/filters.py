@@ -7,7 +7,7 @@ class ProductFilter(django_filters.FilterSet):
     is_active=django_filters.BooleanFilter(field_name='is_active',lookup_expr='exact')
     min_price=django_filters.NumberFilter(field_name='unit_price',lookup_expr='gte')
     max_price=django_filters.NumberFilter(field_name='unit_price',lookup_expr='lte')
-    search=django_filters.CharFilter(method='filter_serach')
+    search=django_filters.CharFilter(method='filter_search')
 
     class Meta:
         model=Product

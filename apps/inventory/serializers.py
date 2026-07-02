@@ -14,6 +14,16 @@ class TransferInventorySerializer(serializers.Serializer):
     quantity=serializers.IntegerField(required=True)
     notes=serializers.CharField(required=False,allow_blank=True)
 
+class LowStockAlertSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField(read_only=True)
+    sku = serializers.CharField(read_only=True)
+    product_name = serializers.CharField(read_only=True)
+    warehouse_id = serializers.IntegerField(read_only=True)
+    warehouse_name = serializers.CharField(read_only=True)
+    quantity_available = serializers.IntegerField(read_only=True)
+    reorder_level = serializers.IntegerField(read_only=True)
+    deficit = serializers.IntegerField(read_only=True)
+
 from .models import Inventory
 
 class InventorySerializer(serializers.ModelSerializer):

@@ -24,6 +24,8 @@ services:
       - .:/app
     environment:
       - DJANGO_SETTINGS_MODULE=supplysync.settings.development
+      - CELERY_BROKER_URL=redis://redis:6379/0 
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       - postgres
       - redis
@@ -35,6 +37,9 @@ services:
       - .:/app
     environment:
       - DJANGO_SETTINGS_MODULE=supplysync.settings.development
+      - DB_HOST=postgres
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       - postgres
       - redis
