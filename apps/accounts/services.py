@@ -3,15 +3,22 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 from core.exceptions import InvalidOperationException
 from .models import User
-
+from django.db import IntegrityError
 def register_user(data: dict) -> dict:
-    user = User.objects.create_user(
-        email=data['email'],
-        password=data['password'],
-        username=data['username'],
-        full_name=data['full_name'],
-        role=data['role']
-    )
+    try:
+        user = User.objects.create_user(
+            email=data['email'],
+            password=data['password'],
+            username=data['username'],
+            full_name=data['full_name'],
+            role=data['role']
+        )
+    except IntegrityError:
+        # Catch the database crash and translate it into a safe API error
+        raise InvalidOperationException(
+            detail="A user with this email or username already exists.", 
+            code="DUPLICATE_USER"
+        )
     
     refresh = RefreshToken.for_user(user)
     
@@ -24,6 +31,7 @@ def register_user(data: dict) -> dict:
         "access_token": str(refresh.access_token),
         "refresh_token": str(refresh)
     }
+
 
 def login_user(email: str, password: str) -> dict | None:
     user = authenticate(email=email, password=password)
