@@ -3,7 +3,7 @@ import pytest
 pytestmark = pytest.mark.django_db
 
 def test_register_returns_201_with_valid_request(api_client):
-    url = '/api/v1/auth/accounts/register/'
+    url = '/api/v1/auth/register/'
     payload = {
         "username": "newuser",
         "email": "newuser@test.com",
@@ -12,13 +12,14 @@ def test_register_returns_201_with_valid_request(api_client):
     }
     
     response = api_client.post(url, payload, format='json')
+    print("\n--- DEBUG REGISTRATION ERROR ---:", response.data)
     
     assert response.status_code == 201
     assert 'id' in response.data
     assert response.data['username'] == 'newuser'
 
 def test_register_returns_409_when_email_already_exists(api_client, admin_user):
-    url = '/api/v1/auth/accounts/register/'
+    url = '/api/v1/auth/register/'
     payload = {
         "username": "anotheruser",
         "email": admin_user.email,
@@ -31,7 +32,7 @@ def test_register_returns_409_when_email_already_exists(api_client, admin_user):
     assert response.status_code == 409
 
 def test_login_returns_200_with_valid_credentials(api_client, staff_user):
-    url = '/api/accounts/login/'
+    url = '/api/v1/auth/login/'
     payload = {
         "username": staff_user.username,
         "password": "TestPassword123!"
@@ -44,7 +45,7 @@ def test_login_returns_200_with_valid_credentials(api_client, staff_user):
     assert 'refresh' in response.data
 
 def test_login_returns_401_with_invalid_credentials(api_client, staff_user):
-    url = '/api/v1/auth/accounts/login/'
+    url = '/api/v1/auth/login/'
     payload = {
         "username": staff_user.username,
         "password": "WrongPassword!"
@@ -55,7 +56,7 @@ def test_login_returns_401_with_invalid_credentials(api_client, staff_user):
     assert response.status_code == 401
 
 def test_refresh_token_returns_200_with_valid_refresh_token(api_client, staff_user):
-    login_url = '/api/v1/auth/accounts/login/'
+    login_url = '/api/v1/auth/login/'
     login_payload = {
         "username": staff_user.username,
         "password": "TestPassword123!"
@@ -63,7 +64,7 @@ def test_refresh_token_returns_200_with_valid_refresh_token(api_client, staff_us
     login_response = api_client.post(login_url, login_payload, format='json')
     refresh_token = login_response.data.get('refresh')
     
-    refresh_url = '/api/accounts/refresh/'
+    refresh_url = '/api/v1/auth/refresh/'
     refresh_payload = {
         "refresh": refresh_token
     }
