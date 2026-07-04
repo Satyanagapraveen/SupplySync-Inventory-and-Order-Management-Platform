@@ -1,7 +1,7 @@
 import logging
 from celery import shared_task
 logger=logging.getLogger(__name__)
-@shared_task(bind=True,max_retries=2)
+@shared_task(bind=True,max_retries=3)
 def process_purchase_order_received_event(self,po_id:int,received_by_user_id:int):
     try:
         logger.info(
@@ -10,4 +10,4 @@ def process_purchase_order_received_event(self,po_id:int,received_by_user_id:int
     except Exception as exc:
         logger.error(
             f"Task process_purchase_order_received_event failed, retrying... Exception: {exc}")
-        raise self.retry(self,countdown=2**self.request.retries)
+        raise self.retry(exc=exc,countdown=2**self.request.retries)

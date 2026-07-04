@@ -142,8 +142,9 @@ def receive_purchase_order(po_id: int, data: dict, performed_by_user_id: int) ->
 def cancel_purchase_order(po_id: int, reason: str) -> PurchaseOrder:
     po = PurchaseOrder.objects.select_for_update().get(id=po_id)
     
-    if po.status in ['ORDERED', 'PARTIALLY_RECEIVED', 'RECEIVED']:
+    if po.status in ['ORDERED', 'PARTIALLY_RECEIVED', 'RECEIVED','CANCELLED']:
         raise InvalidOperationException(detail="Cannot cancel an active fulfilling order.", code="PO_CANCELLATION_NOT_ALLOWED")
+        raise InvalidOperationException(detail="Cannot cancel an order that has been already cancelled")
         raise InvalidOperationException(detail="Cannot cancel an order that is being fulfilled or has been received.", code="PO_CANCELLATION_NOT_ALLOWED")
         
     po.status = 'CANCELLED'

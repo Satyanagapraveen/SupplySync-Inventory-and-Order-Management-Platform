@@ -7,7 +7,7 @@ logger=logging.getLogger(__name__)
 def process_inventory_updated_event(self,product_id:int,warehouse_id:int,transaction_type:str,quantity:str):
     from .services import check_and_publish_low_stock_alert
     try:
-        logger.info(f"EVENT[inventory-updated]:product_id={product_id},warehouse_id={warehouse_id},type={transaction_type},qty={quantity}")
+        logger.info(f"EVENT [inventory-updated]: product_id={product_id},warehouse_id={warehouse_id},type={transaction_type},qty={quantity}")
         check_and_publish_low_stock_alert(product_id,warehouse_id)    
     except Exception as exc:
         logger.error(f"Task product_inventory_updated_event failed, retrying ... Exception:{exc}")

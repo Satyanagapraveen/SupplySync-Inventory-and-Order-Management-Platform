@@ -45,7 +45,7 @@ class SupplierDetailView(generics.GenericAPIView):
         return [IsAuthenticated()]
 
     def get(self, request, pk, *args, **kwargs):
-        supplier = get_supplier_by_id(pk)
+        supplier = get_supplier(pk)
         serializer = self.get_serializer(supplier)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
